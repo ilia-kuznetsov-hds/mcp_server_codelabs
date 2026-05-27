@@ -1,9 +1,11 @@
 from fastmcp import FastMCP
 from google import genai
 from google.genai import types
+import io
 from PIL import Image
 import logging
 import os
+from dotenv import load_dotenv
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,12 +19,16 @@ logger = logging.getLogger(__name__)
 
 mcp = FastMCP("holidays")
 
-genai_client = genai.Client()
-TEXT_MODEL = "gemini-2.5-flash"
-IMAGE_MODEL = "gemini-2.5-flash-image"
+load_dotenv()
+
+api_key = os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY"))
+genai_client = genai.Client(api_key=api_key)
+TEXT_MODEL = "gemini-3.5-flash"
+IMAGE_MODEL = "imagen-4.0-generate-001"
 
 def generate_image(prompt: str, aspect_ratio: str, output_path: str, input_images=[]):
-    """Take a prompt and input images (if any) and generate and save a resulting image using a model."""
+    """Take a prompt and input images (if any) and generate and 
+    save a resulting image using a model."""
     logger.info(f"Generating image with prompt: {prompt[:50]}...")
     logger.info(f"Output path: {output_path}")
 
@@ -31,22 +37,27 @@ def generate_image(prompt: str, aspect_ratio: str, output_path: str, input_image
     contents = [prompt]
     for image in input_images:
         contents.append(Image.open(image))
-
-    response = genai_client.models.generate_content(
+    
+    # https://ai.google.dev/gemini-api/docs/imagen
+    response = genai_client.models.generate_images(
         model=IMAGE_MODEL,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            image_config=types.ImageConfig(
-                aspect_ratio=aspect_ratio,
-            )
+        prompt=prompt,
+        config=types.GenerateImagesConfig(
+            number_of_images=1,
+            aspect_ratio=aspect_ratio,
+            output_mime_type="image/png"
         )
     )
-    for part in response.parts:
-        if part.text is not None:
-            print(part.text)
-        elif part.inline_data is not None:
-            image = part.as_image()
-            image.save(output_path)
+
+    if response.generated_images:
+        for generated_image in response.generated_images:
+            if hasattr(generated_image.image, 'save'):
+                generated_image.image.save(output_path)
+            else:
+                image = Image.open(io.BytesIO(generated_image.image.image_bytes))
+                image.save(output_path)
+    else:
+        logger.error("No images generated. This could be due to safety filters.")
 
 @mcp.tool
 def generate_holiday_scene(interest: str) -> str:
@@ -57,7 +68,21 @@ def generate_holiday_scene(interest: str) -> str:
         interest: A description of the user's interests (e.g., "birds", "music").
     """
     
-    #REPLACE_GENERATE_HOLIDAY_SCENE
+    prompt = (
+        f"""
+        Create a fun, high-fidelity 2D image of a winter holiday scene with Doom Guy from Doom videogame.
+        The scene should be warm and inviting with soft cinematic lighting.
+        
+        Seamlessly integrate the following specific theme/interest into the 
+        holiday decor or landscape: {interest}.
+        
+        The style should be whimsical but detailed.
+        Aspect Ratio: 16:9 Landscape 
+        """
+        )
+
+    generate_image(prompt, "16:9", "static/generated_scene.png")
+    return "Done! Saved at generated_scene.png"
 
 @mcp.tool
 def generate_sweater_pattern(motif: str) -> str:
@@ -130,7 +155,7 @@ def generate_wearing_sweater(image_path: str = None) -> str:
         image_path: Optional absolute path to an uploaded photo of the user. If provided, the avatar will resemble the user.
     """
     
-    person_description = "a happy person"
+    person_description = "a Doom Guy from Doom videogame"
     if image_path:
         person_description = analyze_person_features(image_path)
         
@@ -144,10 +169,10 @@ def generate_wearing_sweater(image_path: str = None) -> str:
         - Cute, chibi, or cartoon aesthetic.
         - Bright, cheerful colors.
         - Soft lighting, high fidelity 3D render (like a high-quality toy or animation character).
-        - The character should be facing the camera and smiling.
+        - The character should be facing the camera.
         - The character should resemble the description: {person_description}
         
-        Background: Simple, festive, or winter-themed background that complements the character.
+        Background: winter-themed hell background that complements the character.
         """
     )
     
@@ -159,6 +184,25 @@ def generate_final_photo() -> str:
     """
     Generate the final photo
     """
+
+    prompt = (
+        """
+        Generate a photorealistic close-up shot of a rustic wooden fireplace mantle.
+        
+        Lighting: Warm, glowing ambient light from a fire below (out of frame).
+        Background: Softly blurred (bokeh) pine garland and twinkling lights.
+        
+        Foreground Composition:
+        1. A wooden picture frame containing the [attached selfie image]. 
+           The face in the photo must be clearly visible.
+        2. A folded holiday greeting card standing upright next to the frame. 
+           The front of the card displays the [attached holiday scene image] as a print.
+           
+        Ensure the perspective is grounded and realistic, as if taken with a 50mm lens.
+        """
+    )
+    generate_image(prompt, "16:9", "static/generated_final_photo.png", ["static/generated_selfie.png", "static/generated_scene.png"])
+    return "Done! Saved at generated_final_photo.png"
     
     #REPLACE_GENERATE_FINAL_PHOTO
 
