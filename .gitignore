@@ -13,3 +13,6 @@ npm-debug.log
 yarn-error.log
 package-lock.json
 .vite/
+
+# AI Assistants / Local tools
+.gemini/
