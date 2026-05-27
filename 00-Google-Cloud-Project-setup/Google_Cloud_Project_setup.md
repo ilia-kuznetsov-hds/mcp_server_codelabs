@@ -1,5 +1,40 @@
+# Google Cloud Project Setup
 
+This document outlines the initialization steps for setting up the Google Cloud Project required for this repository.   
+Original instructions can be found here: [Building Personalized Agents with ADK, MCP, and Memory Bank. Step 2: Setup](https://codelabs.developers.google.com/codelabs/christmas-card/instructions?hl=en#1)
+
+Codelab designed to be executed in [Google Cloud Shell](https://ide.cloud.google.com/). 
+
+Part One: Enable Billing Account
+To run this codelab, you need a billing account with some credit. Use the credits from the banner at the top of this codelab to get started. If you are already connected to a billing account, you can skip this step.
+
+Part Two: Setup Files
+
+```
+git clone https://github.com/ilia-kuznetsov-hds/mcp_server_codelabs
+
+cd ~/mcp_server_codelabs/00-Google-Cloud-Project-setup
+
+./init.sh
+
+```
+
+## Setup Script (`init.sh`)
+
+The script below automates the Google Cloud setup process. It performs the following main tasks:
+
+1. **Validates or Creates a Google Cloud Project**: Looks for an existing project ID in `~/project_id.txt`. If it doesn't exist, it interactively creates a new one using a `christmas-` prefix.
+2. **Configures the Google Cloud CLI**: Sets the active `gcloud` project for your environment.
+3. **Installs Dependencies**: Installs the `google-cloud-billing` Python library.
+4. **Enables Billing**: Triggers a separate Python script (`billing-enablement.py`) to link a valid billing account to the newly created project.
+
+If you need to initialize or re-initialize the environment, you can run the following bash script:
+
+```bash
 #!/bin/bash
+
+# Navigate to the script's directory so it can reliably find adjacent files
+cd "$(dirname "$0")" || exit 1
 
 # --- Function for error handling ---
 handle_error() {
@@ -89,3 +124,24 @@ python3 billing-enablement.py || handle_error "The billing enablement script fai
 
 echo -e "\n--- Full Setup Complete ---"
 exit 0
+```
+
+
+Part Three: Setup Permissions
+
+1. 👉💻 Enable the required APIs using the following command. This could take a few minutes.
+```
+gcloud services enable \
+    cloudresourcemanager.googleapis.com \
+    servicenetworking.googleapis.com \
+    run.googleapis.com \
+    aiplatform.googleapis.com \
+    compute.googleapis.com
+```
+
+2. 👉💻 Grant the necessary permissions by running the following commands in the terminal:
+
+```
+. ~/holiday_workshop/00-Google-Cloud-Project-setup/set_env.sh
+```
+

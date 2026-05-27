@@ -1,3 +1,7 @@
+# Get the script's directory and resolve the parent directory (project root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # --- Configuration ---
 PROJECT_FILE="~/project_id.txt"
 # This base name is for other workshops; Summoner's variables are defined below.
@@ -69,7 +73,7 @@ echo "Exported GOOGLE_CLOUD_LOCATION=$GOOGLE_CLOUD_LOCATION"
 
 # --- Write to .env file ---
 echo "--- Writing to .env file ---"
-cat <<EOF > .env
+cat <<EOF > "$PROJECT_ROOT/.env"
 PROJECT_ID=$PROJECT_ID
 PROJECT_NUMBER=$PROJECT_NUMBER
 SERVICE_ACCOUNT_NAME=$SERVICE_ACCOUNT_NAME
